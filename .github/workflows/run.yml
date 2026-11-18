@@ -1,0 +1,57 @@
+name: run
+
+# Chạy thay máy nhà khi máy nhà tắt. Mã không nằm trong repo này: mỗi lượt tải gói mã riêng từ kho Cloudflare
+# (khoá trong Secrets), máy nhà còn chạy thì nghỉ ngay (~15 giây). Nhật ký không in giá / tín hiệu.
+on:
+  schedule:
+    - cron: "3,18,33,48 * * * *"
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "Chạy cả khi máy nhà đang chạy"
+        type: boolean
+        default: false
+
+concurrency:
+  group: run
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      TZ: Asia/Ho_Chi_Minh
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+      CF_NAMESPACE_ID: ${{ secrets.CF_NAMESPACE_ID }}
+      SITE_SECRET: ${{ secrets.SITE_SECRET }}
+    steps:
+      - name: Tải gói mã
+        run: |
+          curl -sSf -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -o b.zip \
+            "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/storage/kv/namespaces/$CF_NAMESPACE_ID/values/push%2Frunner.zip"
+          unzip -q b.zip -d app && rm b.zip
+
+      - name: Bộ đệm nến
+        uses: actions/cache/restore@v4
+        with:
+          path: app/tools/_cache
+          key: nen-v1-${{ github.run_id }}
+          restore-keys: nen-v1-
+
+      - name: Tính
+        id: job
+        env:
+          FORCE: ${{ inputs.force }}
+        run: python3 -X utf8 app/web/runner_job.py
+
+      - name: Lưu bộ đệm nến
+        if: always() && steps.job.outputs.ran == 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: app/tools/_cache
+          key: nen-v1-${{ github.run_id }}
