@@ -57,10 +57,11 @@ jobs:
         id: job
         env:
           FORCE: ${{ inputs.force }}
-        run: python3 -X utf8 app/web/runner_job.py
+        run: python3 -u -X utf8 app/web/runner_job.py
 
       - name: Lưu bộ đệm nến
-        if: always() && steps.job.outputs.ran == 'true'
+        # lưu cả khi lượt chạy lỗi / quá giờ: nến đã tải không phải tải lại
+        if: always() && steps.chk.outputs.ok == 'true' && hashFiles('app/tools/_cache/*.csv') != ''
         uses: actions/cache/save@v4
         with:
           path: app/tools/_cache
