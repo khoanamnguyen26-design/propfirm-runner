@@ -30,13 +30,22 @@ jobs:
       CF_NAMESPACE_ID: ${{ secrets.CF_NAMESPACE_ID }}
       SITE_SECRET: ${{ secrets.SITE_SECRET }}
     steps:
+      - name: Kiểm Secrets
+        id: chk
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CF_ACCOUNT_ID" ] || [ -z "$CF_NAMESPACE_ID" ] || [ -z "$SITE_SECRET" ]; then
+            echo "Chưa đủ Secrets (CLOUDFLARE_API_TOKEN, CF_ACCOUNT_ID, CF_NAMESPACE_ID, SITE_SECRET) — nghỉ"; echo "ok=false" >> "$GITHUB_OUTPUT"
+          else echo "ok=true" >> "$GITHUB_OUTPUT"; fi
+
       - name: Tải gói mã
+        if: steps.chk.outputs.ok == 'true'
         run: |
           curl -sSf -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -o b.zip \
             "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/storage/kv/namespaces/$CF_NAMESPACE_ID/values/push%2Frunner.zip"
           unzip -q b.zip -d app && rm b.zip
 
       - name: Bộ đệm nến
+        if: steps.chk.outputs.ok == 'true'
         uses: actions/cache/restore@v4
         with:
           path: app/tools/_cache
@@ -44,6 +53,7 @@ jobs:
           restore-keys: nen-v1-
 
       - name: Tính
+        if: steps.chk.outputs.ok == 'true'
         id: job
         env:
           FORCE: ${{ inputs.force }}
