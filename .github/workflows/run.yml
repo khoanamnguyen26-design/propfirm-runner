@@ -1,10 +1,10 @@
 name: run
 
 # Chạy thay máy nhà khi máy nhà tắt. Mã không nằm trong repo này: mỗi lượt tải gói mã riêng từ kho Cloudflare
-# (khoá trong Secrets), máy nhà còn chạy thì nghỉ ngay (~15 giây). Nhật ký không in giá / tín hiệu.
+# (khoá trong Secrets), nến vừa đóng đã có máy nhà tính thì nghỉ ngay (~6 giây). Nhật ký không in giá / tín hiệu.
 on:
   schedule:
-    - cron: "3,18,33,48 * * * *"
+    - cron: "7,22,37,52 * * * *"   # dự phòng; chính là Worker Cloudflare gọi ~5 phút sau khi đóng nến nếu máy nhà chưa tính
   workflow_dispatch:
     inputs:
       force:
